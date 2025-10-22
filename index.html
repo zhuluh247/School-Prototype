@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MySchool - Student Results Management System</title>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
+
+    <!-- Icons and External Libraries -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --info-color: #17a2b8;
+            --light-color: #f8f9fa;
+            --dark-color: #343a40;
+            --sidebar-width: 250px;
+            --header-height: 60px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+
+        /* --- Login Page --- */
+        #login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--primary-color), var(--info-color));
+        }
+
+        .login-card {
+            background: white;
+            padding: 2rem 3rem;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .login-card h1 {
+            margin-bottom: 1.5rem;
+            color: var(--dark-color);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+            width: 100%;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+        }
+
+        /* --- Main Application Layout --- */
+        #app-container {
+            display: none; /* Hidden by default */
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .header {
+            height: var(--header-height);
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2rem;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            color: var(--primary-color);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .sidebar {
+            position: fixed;
+            top: var(--header-height);
+            left: 0;
+            bottom: 0;
+            width: var(--sidebar-width);
+            background-color: var(--dark-color);
+            padding-top: 1rem;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar a {
+            display: block;
+            padding: 1rem 1.5rem;
+            color: white;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+
+        .sidebar a:hover, .sidebar a.active {
+            background-color: var(--primary-color);
+        }
+
+        .main-content {
+            margin-left: var(--sidebar-width);
+            margin-top: var(--header-height);
+            padding: 2rem;
+            height: calc(100vh - var(--header-height));
+            overflow-y: auto;
+        }
+
+        .view {
+            display: none;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        .card-header h2 {
+            font-size: 1.25rem;
+            color: var(--dark-color);
+        }
+
+        .btn-success { background-color: var(--success-color); color: white; }
+        .btn-danger { background-color: var(--danger-color); color: white; }
+        .btn-warning { background-color: var(--warning-color); color: black; }
+        .btn-info { background-color: var(--info-color); color: white; }
+        .btn-secondary { background-color: var(--secondary-color); color: white; }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .data-table th, .data-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .data-table th {
+            background-color: var(--light-color);
+            font-weight: 600;
+        }
+
+        .data-table tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        /* --- Modal --- */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .close-btn {
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #aaa;
+        }
+        .close-btn:hover { color: var(--danger-color); }
+
+        /* --- Dashboard Stats --- */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-left: 5px solid var(--primary-color);
+        }
+        .stat-card h3 { font-size: 2rem; margin-bottom: 0.5rem; }
+        .stat-card p { color: var(--secondary-color); }
+
+        /* --- Utility Classes --- */
+        .text-center { text-align: center; }
+        .hide { display: none !important; }
+        .mt-1 { margin-top: 1rem; }
+        .mb-1 { margin-bottom: 1rem; }
+        .form-inline { display: flex; gap: 1rem; align-items: center; }
+
+        /* --- Responsive Design --- */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            .sidebar.active {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+            }
+            .header .menu-toggle {
+                display: block;
+            }
+        }
+        .header .menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- LOGIN VIEW -->
+    <div id="login-container">
+        <div class="login-card">
+            <h1><i class="fas fa-graduation-cap"></i> MySchool Login</h1>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Login</button>
+            </form>
+            <p class="mt-1" style="font-size: 0.8em; color: #666;">
+                Test Accounts:<br>
+                Proprietor: proprietor@myschool.com<br>
+                Teacher: teacher@myschool.com<br>
+                Parent: parent@myschool.com<br>
+                (Password: password123)
+            </p>
+        </div>
+    </div>
+
+    <!-- MAIN APPLICATION VIEW -->
+    <div id="app-container">
+        <header class="header">
+            <button class="menu-toggle" id="menu-toggle"><i class="fas fa-bars"></i></button>
+            <h1>MySchool Portal</h1>
+            <div class="user-info">
+                <span id="user-name">Loading...</span>
+                <span id="user-role" style="font-weight: bold;"></span>
+                <button class="btn btn-danger" id="logout-btn">Logout</button>
+            </div>
+        </header>
+
+        <nav class="sidebar" id="sidebar">
+            <a href="#" data-view="dashboard-view"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <a href="#" data-view="students-view" class="role-proprietor role-teacher"><i class="fas fa-user-graduate"></i> Students</a>
+            <a href="#" data-view="classes-view" class="role-proprietor role-teacher"><i class="fas fa-chalkboard"></i> Classes</a>
+            <a href="#" data-view="subjects-view" class="role-proprietor role-teacher"><i class="fas fa-book"></i> Subjects</a>
+            <a href="#" data-view="results-view" class="role-proprietor role-teacher"><i class="fas fa-chart-line"></i> Results</a>
+            <a href="#" data-view="behavior-view" class="role-proprietor role-teacher"><i class="fas fa-comment-dots"></i> Behavior</a>
+            <a href="#" data-view="users-view" class="role-proprietor"><i class="fas fa-users-cog"></i> User Management</a>
+        </nav>
+
+        <main class="main-content">
+            <!-- DASHBOARD VIEW -->
+            <div id="dashboard-view" class="view active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3 id="stat-students">0</h3>
+                        <p>Total Students</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="stat-classes">0</h3>
+                        <p>Total Classes</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="stat-subjects">0</h3>
+                        <p>Total Subjects</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="stat-teachers">0</h3>
+                        <p>Total Teachers</p>
+                    </div>
+                </div>
+                <div class="card mt-1">
+                    <div class="card-header">
+                        <h2>Recent Activity</h2>
+                    </div>
+                    <p>System is ready. No recent activities to show.</p>
+                </div>
+            </div>
+
+            <!-- STUDENTS VIEW -->
+            <div id="students-view" class="view">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Student Management</h2>
+                        <div>
+                            <button class="btn btn-success" id="add-student-btn"><i class="fas fa-plus"></i> Add Student</button>
+                            <button class="btn btn-info" id="upload-students-btn"><i class="fas fa-file-excel"></i> Upload Excel</button>
+                        </div>
+                    </div>
+                    <input type="file" id="students-excel-input" class="hide" accept=".xlsx, .xls">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Student ID</th>
+                                <th>Full Name</th>
+                                <th>Class</th>
+                                <th>Parent's Email</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="students-table-body">
+                            <!-- Data will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- CLASSES VIEW -->
+            <div id="classes-view" class="view">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Class Management</h2>
+                        <button class="btn btn-success" id="add-class-btn"><i class="fas fa-plus"></i> Add Class</button>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Class Name</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="classes-table-body">
+                            <!-- Data will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SUBJECTS VIEW -->
+            <div id="subjects-view" class="view">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Subject Management</h2>
+                        <div>
+                            <button class="btn btn-success" id="add-subject-btn"><i class="fas fa-plus"></i> Add Subject</button>
+                            <button class="btn btn-info" id="upload-subjects-btn"><i class="fas fa-file-excel"></i> Upload Excel</button>
+                        </div>
+                    </div>
+                    <input type="file" id="subjects-excel-input" class="hide" accept=".xlsx, .xls">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Subject Name</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="subjects-table-body">
+                            <!-- Data will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- RESULTS VIEW -->
+            <div id="results-view" class="view">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Results Management</h2>
+                        <button class="btn btn-success" id="add-result-btn"><i class="fas fa-plus"></i> Add Result</button>
+                    </div>
+                    <div class="form-inline">
+                        <select id="result-class-filter" class="form-control">
+                            <option value="">All Classes</option>
+                        </select>
+                        <select id="result-term-filter" class="form-control">
+                            <option value="">All Terms</option>
+                            <option value="First Term">First Term</option>
+                            <option value="Second Term">Second Term</option>
+                            <option value="Third Term">Third Term</option>
+                        </select>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Student Name</th>
+                                <th>Class</th>
+                                <th>Subject</th>
+                                <th>Term</th>
+                                <th>Score (100)</th>
+                                <th>Grade</th>
+                                <th>Position</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-table-body">
+                            <!-- Data will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- BEHAVIOR VIEW -->
+            <div id="behavior-view" class="view">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Behavior Tracking</h2>
+                        <button class="btn btn-success" id="add-behavior-btn"><i class="fas fa-plus"></i> Add Entry</button>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Student Name</th>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="behavior-table-body">
+                            <!-- Data will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- USER MANAGEMENT VIEW -->
+            <div id="users-view" class="view">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>User Management (Teachers & Parents)</h2>
+                        <button class="btn btn-success" id="add-user-btn"><i class="fas fa-plus"></i> Add User</button>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Full Name</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body">
+                            <!-- Data will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODALS -->
+    <!-- Add/Edit Student Modal -->
+    <div id="student-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="student-modal-title">Add Student</h2>
+                <span class="close-btn" data-modal="student-modal">&times;</span>
+            </div>
+            <form id="student-form">
+                <input type="hidden" id="student-id">
+                <div class="form-group">
+                    <label for="student-fullname">Full Name</label>
+                    <input type="text" id="student-fullname" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="student-class">Class</label>
+                    <select id="student-class" class="form-control" required>
+                        <!-- Options will be populated by JS -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="student-parent-email">Parent's Email</label>
+                    <input type="email" id="student-parent-email" class="form-control">
+                </div>
+                <button type="submit" class="btn btn-primary">Save Student</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Class Modal -->
+    <div id="class-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Class</h2>
+                <span class="close-btn" data-modal="class-modal">&times;</span>
+            </div>
+            <form id="class-form">
+                <div class="form-group">
+                    <label for="class-name">Class Name</label>
+                    <input type="text" id="class-name" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Save Class</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Subject Modal -->
+    <div id="subject-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Subject</h2>
+                <span class="close-btn" data-modal="subject-modal">&times;</span>
+            </div>
+            <form id="subject-form">
+                <div class="form-group">
+                    <label for="subject-name">Subject Name</label>
+                    <input type="text" id="subject-name" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Save Subject</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Result Modal -->
+    <div id="result-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Result</h2>
+                <span class="close-btn" data-modal="result-modal">&times;</span>
+            </div>
+            <form id="result-form">
+                <input type="hidden" id="result-id">
+                <div class="form-group">
+                    <label for="result-student">Student</label>
+                    <select id="result-student" class="form-control" required>
+                        <!-- Options will be populated by JS -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="result-subject">Subject</label>
+                    <select id="result-subject" class="form-control" required>
+                        <!-- Options will be populated by JS -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="result-term">Term</label>
+                    <select id="result-term" class="form-control" required>
+                        <option value="First Term">First Term</option>
+                        <option value="Second Term">Second Term</option>
+                        <option value="Third Term">Third Term</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="result-score">Score (out of 100)</label>
+                    <input type="number" id="result-score" class="form-control" min="0" max="100" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Save Result</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Behavior Modal -->
+    <div id="behavior-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Behavior Entry</h2>
+                <span class="close-btn" data-modal="behavior-modal">&times;</span>
+            </div>
+            <form id="behavior-form">
+                <input type="hidden" id="behavior-id">
+                <div class="form-group">
+                    <label for="behavior-student">Student</label>
+                    <select id="behavior-student" class="form-control" required>
+                        <!-- Options will be populated by JS -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="behavior-date">Date</label>
+                    <input type="date" id="behavior-date" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="behavior-type">Type</label>
+                    <select id="behavior-type" class="form-control" required>
+                        <option value="Positive">Positive</option>
+                        <option value="Negative">Negative</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="behavior-description">Description</label>
+                    <textarea id="behavior-description" class="form-control" rows="3" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Save Entry</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add User Modal -->
+    <div id="user-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add User</h2>
+                <span class="close-btn" data-modal="user-modal">&times;</span>
+            </div>
+            <form id="user-form">
+                <div class="form-group">
+                    <label for="user-email">Email</label>
+                    <input type="email" id="user-email" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="user-password">Temporary Password</label>
+                    <input type="password" id="user-password" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="user-fullname">Full Name</label>
+                    <input type="text" id="user-fullname" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="user-role">Role</label>
+                    <select id="user-role-select" class="form-control" required>
+                        <option value="Teacher">Teacher</option>
+                        <option value="Parent">Parent</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Create User</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- PDF Report Modal -->
+    <div id="pdf-modal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2>Result Report</h2>
+                <span class="close-btn" data-modal="pdf-modal">&times;</span>
+            </div>
+            <div id="pdf-content">
+                <!-- Content will be generated here -->
+            </div>
+            <div class="text-center mt-1">
+                <button class="btn btn-primary" id="download-pdf-btn">Download PDF</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+// --- FIREBASE CONFIGURATION ---
+const firebaseConfig = {
+    apiKey: "AIzaSyClD1P291fsCdw6-sX7iJaa7h32pD1c0h0",
+    authDomain: "myschool-projectz.firebaseapp.com",
+    databaseURL: "https://myschool-projectz-default-rtdb.firebaseio.com",
+    projectId: "myschool-projectz",
+    storageBucket: "myschool-projectz.appspot.com",
+    messagingSenderId: "334082049487",
+    appId: "1:334082049487:web:9879c2688e105bb98c7eba",
+    measurementId: "G-NZDYFGMYLQ"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
+
+// --- GLOBAL STATE ---
+let currentUser = null;
+let currentUserRole = null;
+let allData = {
+    students: {},
+    classes: {},
+    subjects: {},
+    results: {},
+    behavior: {},
+    users: {}
+};
+
+// --- DOM ELEMENT REFERENCES ---
+const loginContainer = document.getElementById('login-container');
+const appContainer = document.getElementById('app-container');
+const loginForm = document.getElementById('login-form');
+const logoutBtn = document.getElementById('logout-btn');
+const sidebar = document.getElementById('sidebar');
+const mainContent = document.querySelector('.main-content');
+const menuToggle = document.getElementById('menu-toggle');
+
+// --- AUTHENTICATION ---
+auth.onAuthStateChanged(async user => {
+    if (user) {
+        currentUser = user;
+        const userSnapshot = await db.ref('users/' + user.uid).once('value');
+        currentUserRole = userSnapshot.val()?.role || 'Parent'; // Default to Parent if role not set
+
+        document.getElementById('user-name').textContent = user.email;
+        document.getElementById('user-role').textContent = `(${currentUserRole})`;
+        
+        loginContainer.style.display = 'none';
+        appContainer.style.display = 'block';
+
+        setupRoleBasedUI();
+        fetchAllData();
+        showView('dashboard-view');
+    } else {
+        currentUser = null;
+        currentUserRole = null;
+        loginContainer.style.display = 'flex';
+        appContainer.style.display = 'none';
+    }
+});
+
+loginForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+    auth.signInWithEmailAndPassword(email, password).catch(error => {
+        alert("Login failed: " + error.message);
+    });
+});
+
+logoutBtn.addEventListener('click', () => auth.signOut());
+
+// --- ROLE-BASED UI ---
+function setupRoleBasedUI() {
+    const roleLinks = document.querySelectorAll('.sidebar a');
+    roleLinks.forEach(link => {
+        const requiredRoles = link.className.split(' ').filter(c => c.startsWith('role-')).map(c => c.replace('role-', ''));
+        if (requiredRoles.length > 0 && !requiredRoles.includes(currentUserRole)) {
+            link.style.display = 'none';
+        } else {
+            link.style.display = 'block';
+        }
+    });
+}
+
+// --- VIEW MANAGEMENT ---
+function showView(viewId) {
+    document.querySelectorAll('.view').forEach(view => view.classList.remove('active'));
+    document.getElementById(viewId).classList.add('active');
+    document.querySelectorAll('.sidebar a').forEach(link => link.classList.remove('active'));
+    document.querySelector(`.sidebar a[data-view="${viewId}"]`).classList.add('active');
+}
+
+document.querySelectorAll('.sidebar a').forEach(link => {
+    link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const viewId = link.getAttribute('data-view');
+        if (viewId) showView(viewId);
+    });
+});
+
+// --- MODAL MANAGEMENT ---
+function openModal(modalId) {
+    document.getElementById(modalId).style.display = 'flex';
+}
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+}
+
+document.querySelectorAll('.close-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        closeModal(btn.getAttribute('data-modal'));
+    });
+});
+window.addEventListener('click', (e) => {
+    if (e.target.classList.contains('modal')) {
+        closeModal(e.target.id);
+    }
+});
+
+// --- DATA FETCHING ---
+async function fetchAllData() {
+    const promises = [];
+    ['students', 'classes', 'subjects', 'results', 'behavior', 'users'].forEach(collection => {
+        promises.push(db.ref(collection).once('value').then(snapshot => {
+            allData[collection] = snapshot.val() || {};
+        }));
+    });
+    await Promise.all(promises);
+    renderAllViews();
+}
+
+// --- RENDERING FUNCTIONS ---
+function renderAllViews() {
+    renderDashboard();
+    renderStudentsTable();
+    renderClassesTable();
+    renderSubjectsTable();
+    renderResultsTable();
+    renderBehaviorTable();
+    renderUsersTable();
+    populateSelects();
+}
+
+function renderDashboard() {
+    document.getElementById('stat-students').textContent = Object.keys(allData.students).length;
+    document.getElementById('stat-classes').textContent = Object.keys(allData.classes).length;
+    document.getElementById('stat-subjects').textContent = Object.keys(allData.subjects).length;
+    const teacherCount = Object.values(allData.users).filter(u => u.role === 'Teacher').length;
+    document.getElementById('stat-teachers').textContent = teacherCount;
+}
+
+function renderStudentsTable() {
+    const tbody = document.getElementById('students-table-body');
+    tbody.innerHTML = '';
+    Object.entries(allData.students).forEach(([id, student]) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${id}</td>
+            <td>${student.fullName}</td>
+            <td>${allData.classes[student.classId]?.name || 'N/A'}</td>
+            <td>${student.parentEmail || 'N/A'}</td>
+            <td>
+                <button class="btn btn-warning" onclick="editStudent('${id}')">Edit</button>
+                <button class="btn btn-danger" onclick="deleteItem('students', '${id}')">Delete</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function renderClassesTable() {
+    const tbody = document.getElementById('classes-table-body');
+    tbody.innerHTML = '';
+    Object.entries(allData.classes).forEach(([id, cls]) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${cls.name}</td>
+            <td>
+                <button class="btn btn-danger" onclick="deleteItem('classes', '${id}')">Delete</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function renderSubjectsTable() {
+    const tbody = document.getElementById('subjects-table-body');
+    tbody.innerHTML = '';
+    Object.entries(allData.subjects).forEach(([id, subject]) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${subject.name}</td>
+            <td>
+                <button class="btn btn-danger" onclick="deleteItem('subjects', '${id}')">Delete</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function renderResultsTable() {
+    const tbody = document.getElementById('results-table-body');
+    tbody.innerHTML = '';
+    const classFilter = document.getElementById('result-class-filter').value;
+    const termFilter = document.getElementById('result-term-filter').value;
+
+    Object.entries(allData.results).forEach(([id, result]) => {
+        const student = allData.students[result.studentId];
+        if (!student) return;
+        if (classFilter && student.classId !== classFilter) return;
+        if (termFilter && result.term !== termFilter) return;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${student.fullName}</td>
+            <td>${allData.classes[student.classId]?.name || 'N/A'}</td>
+            <td>${allData.subjects[result.subjectId]?.name || 'N/A'}</td>
+            <td>${result.term}</td>
+            <td>${result.score}</td>
+            <td>${result.grade}</td>
+            <td>${result.position || '-'}</td>
+            <td>
+                <button class="btn btn-info" onclick="viewResultReport('${id}')">Report</button>
+                <button class="btn btn-danger" onclick="deleteItem('results', '${id}')">Delete</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function renderBehaviorTable() {
+    const tbody = document.getElementById('behavior-table-body');
+    tbody.innerHTML = '';
+    Object.entries(allData.behavior).forEach(([id, entry]) => {
+        const student = allData.students[entry.studentId];
+        if (!student) return;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${student.fullName}</td>
+            <td>${entry.date}</td>
+            <td><span class="btn ${entry.type === 'Positive' ? 'btn-success' : 'btn-danger'}" style="font-size:0.8em; padding:0.2rem 0.5rem;">${entry.type}</span></td>
+            <td>${entry.description}</td>
+            <td>
+                <button class="btn btn-danger" onclick="deleteItem('behavior', '${id}')">Delete</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function renderUsersTable() {
+    const tbody = document.getElementById('users-table-body');
+    tbody.innerHTML = '';
+    Object.entries(allData.users).forEach(([id, user]) => {
+        if (id === currentUser.uid) return; // Don't show self
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${id}</td>
+            <td>${user.role}</td>
+            <td>${user.fullName || 'N/A'}</td>
+            <td>
+                <button class="btn btn-danger" onclick="deleteItem('users', '${id}')">Delete</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function populateSelects() {
+    // Populate class selects
+    const classSelects = ['student-class', 'result-class-filter'];
+    classSelects.forEach(selectId => {
+        const select = document.getElementById(selectId);
+        const currentValue = select.value;
+        select.innerHTML = selectId === 'result-class-filter' ? '<option value="">All Classes</option>' : '';
+        Object.entries(allData.classes).forEach(([id, cls]) => {
+            select.innerHTML += `<option value="${id}">${cls.name}</option>`;
+        });
+        select.value = currentValue;
+    });
+
+    // Populate student selects
+    const studentSelects = ['result-student', 'behavior-student'];
+    studentSelects.forEach(selectId => {
+        const select = document.getElementById(selectId);
+        select.innerHTML = '';
+        Object.entries(allData.students).forEach(([id, student]) => {
+            select.innerHTML += `<option value="${id}">${student.fullName}</option>`;
+        });
+    });
+
+    // Populate subject select
+    const subjectSelect = document.getElementById('result-subject');
+    subjectSelect.innerHTML = '';
+    Object.entries(allData.subjects).forEach(([id, subject]) => {
+        subjectSelect.innerHTML += `<option value="${id}">${subject.name}</option>`;
+    });
+}
+
+// --- CRUD OPERATIONS ---
+async function saveItem(collection, data, id = null) {
+    if (id) {
+        await db.ref(collection + '/' + id).update(data);
+    } else {
+        await db.ref(collection).push(data);
+    }
+    fetchAllData();
+}
+
+function deleteItem(collection, id) {
+    if (confirm('Are you sure you want to delete this item?')) {
+        db.ref(collection + '/' + id).remove().then(fetchAllData);
+    }
+}
+
+// --- FORM HANDLERS ---
+// Student Form
+document.getElementById('add-student-btn').addEventListener('click', () => {
+    document.getElementById('student-modal-title').textContent = 'Add Student';
+    document.getElementById('student-form').reset();
+    document.getElementById('student-id').value = '';
+    openModal('student-modal');
+});
+
+function editStudent(id) {
+    const student = allData.students[id];
+    document.getElementById('student-modal-title').textContent = 'Edit Student';
+    document.getElementById('student-id').value = id;
+    document.getElementById('student-fullname').value = student.fullName;
+    document.getElementById('student-class').value = student.classId;
+    document.getElementById('student-parent-email').value = student.parentEmail || '';
+    openModal('student-modal');
+}
+
+document.getElementById('student-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const id = document.getElementById('student-id').value;
+    const data = {
+        fullName: document.getElementById('student-fullname').value,
+        classId: document.getElementById('student-class').value,
+        parentEmail: document.getElementById('student-parent-email').value,
+    };
+    saveItem('students', data, id);
+    closeModal('student-modal');
+});
+
+// Class Form
+document.getElementById('add-class-btn').addEventListener('click', () => {
+    document.getElementById('class-form').reset();
+    openModal('class-modal');
+});
+document.getElementById('class-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const data = { name: document.getElementById('class-name').value };
+    saveItem('classes', data);
+    closeModal('class-modal');
+});
+
+// Subject Form
+document.getElementById('add-subject-btn').addEventListener('click', () => {
+    document.getElementById('subject-form').reset();
+    openModal('subject-modal');
+});
+document.getElementById('subject-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const data = { name: document.getElementById('subject-name').value };
+    saveItem('subjects', data);
+    closeModal('subject-modal');
+});
+
+// Result Form
+document.getElementById('add-result-btn').addEventListener('click', () => {
+    document.getElementById('result-form').reset();
+    document.getElementById('result-id').value = '';
+    openModal('result-modal');
+});
+document.getElementById('result-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('result-id').value;
+    const score = parseInt(document.getElementById('result-score').value);
+    const data = {
+        studentId: document.getElementById('result-student').value,
+        subjectId: document.getElementById('result-subject').value,
+        term: document.getElementById('result-term').value,
+        score: score,
+        grade: calculateGrade(score),
+        position: null // Position will be calculated separately
+    };
+    await saveItem('results', data, id);
+    calculateAndAssignPositions(data.subjectId, data.term);
+    closeModal('result-modal');
+});
+
+// Behavior Form
+document.getElementById('add-behavior-btn').addEventListener('click', () => {
+    document.getElementById('behavior-form').reset();
+    document.getElementById('behavior-id').value = '';
+    openModal('behavior-modal');
+});
+document.getElementById('behavior-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const data = {
+        studentId: document.getElementById('behavior-student').value,
+        date: document.getElementById('behavior-date').value,
+        type: document.getElementById('behavior-type').value,
+        description: document.getElementById('behavior-description').value,
+    };
+    saveItem('behavior', data);
+    closeModal('behavior-modal');
+});
+
+// User Form
+document.getElementById('add-user-btn').addEventListener('click', () => {
+    document.getElementById('user-form').reset();
+    openModal('user-modal');
+});
+document.getElementById('user-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('user-email').value;
+    const password = document.getElementById('user-password').value;
+    try {
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        const user = userCredential.user;
+        await db.ref('users/' + user.uid).set({
+            role: document.getElementById('user-role-select').value,
+            fullName: document.getElementById('user-fullname').value,
+        });
+        alert('User created successfully!');
+        fetchAllData();
+        closeModal('user-modal');
+    } catch (error) {
+        alert('Error creating user: ' + error.message);
+    }
+});
+
+// --- EXCEL UPLOAD ---
+document.getElementById('upload-students-btn').addEventListener('click', () => {
+    document.getElementById('students-excel-input').click();
+});
+document.getElementById('students-excel-input').addEventListener('change', handleFileUpload('students'));
+
+document.getElementById('upload-subjects-btn').addEventListener('click', () => {
+    document.getElementById('subjects-excel-input').click();
+});
+document.getElementById('subjects-excel-input').addEventListener('change', handleFileUpload('subjects'));
+
+function handleFileUpload(collection) {
+    return (e) => {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            const data = new Uint8Array(event.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+
+            for (const row of jsonData) {
+                if (collection === 'students') {
+                    // Expected columns: fullName, className, parentEmail
+                    const classId = Object.keys(allData.classes).find(id => allData.classes[id].name === row.className);
+                    if (classId) {
+                        await saveItem('students', { fullName: row.fullName, classId, parentEmail: row.parentEmail });
+                    }
+                } else if (collection === 'subjects') {
+                    // Expected column: name
+                    await saveItem('subjects', { name: row.name });
+                }
+            }
+            alert('Upload complete!');
+            fetchAllData();
+        };
+        reader.readAsArrayBuffer(file);
+    };
+}
+
+// --- PDF GENERATION ---
+function viewResultReport(resultId) {
+    const result = allData.results[resultId];
+    const student = allData.students[result.studentId];
+    const subject = allData.subjects[result.subjectId];
+    const studentClass = allData.classes[student.classId];
+
+    const pdfContent = document.getElementById('pdf-content');
+    pdfContent.innerHTML = `
+        <h1 style="text-align:center; color: var(--primary-color);">MySchool Result Report</h1>
+        <hr>
+        <h2>Student Information</h2>
+        <p><strong>Full Name:</strong> ${student.fullName}</p>
+        <p><strong>Class:</strong> ${studentClass.name}</p>
+        <hr>
+        <h2>Result Details</h2>
+        <p><strong>Subject:</strong> ${subject.name}</p>
+        <p><strong>Term:</strong> ${result.term}</p>
+        <p><strong>Score:</strong> ${result.score} / 100</p>
+        <p><strong>Grade:</strong> ${result.grade}</p>
+        <p><strong>Position in Class:</strong> ${result.position || 'Not assigned'}</p>
+        <hr>
+        <p style="text-align:center; margin-top: 2rem; font-size: 0.9em; color: #777;">
+            Generated on ${new Date().toLocaleDateString()}
+        </p>
+    `;
+    openModal('pdf-modal');
+}
+
+document.getElementById('download-pdf-btn').addEventListener('click', () => {
+    const { jsPDF } = window.jspdf;
+    const pdfContent = document.getElementById('pdf-content');
+    
+    html2canvas(pdfContent).then(canvas => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const imgWidth = 210; // A4 width in mm
+        const pageHeight = 295; // A4 height in mm
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        let heightLeft = imgHeight;
+        let position = 0;
+
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+
+        while (heightLeft >= 0) {
+            position = heightLeft - imgHeight;
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+        }
+        pdf.save(`result_report_${Date.now()}.pdf`);
+    });
+});
+
+// --- HELPER FUNCTIONS ---
+function calculateGrade(score) {
+    if (score >= 90) return 'A+';
+    if (score >= 80) return 'A';
+    if (score >= 70) return 'B';
+    if (score >= 60) return 'C';
+    if (score >= 50) return 'D';
+    if (score >= 45) return 'E';
+    return 'F';
+}
+
+async function calculateAndAssignPositions(subjectId, term) {
+    const subjectResults = Object.entries(allData.results).filter(([id, r]) => r.subjectId === subjectId && r.term === term);
+    
+    // Get student IDs and sort them by score
+    const studentScores = subjectResults.map(([id, r]) => ({ id, studentId: r.studentId, score: r.score }));
+    studentScores.sort((a, b) => b.score - a.score);
+
+    // Assign positions
+    const updates = {};
+    studentScores.forEach((item, index) => {
+        updates[`results/${item.id}/position`] = index + 1;
+    });
+
+    // Batch update positions in Firebase
+    await db.ref().update(updates);
+    fetchAllData(); // Refresh data to show new positions
+}
+
+// --- EVENT LISTENERS FOR FILTERS ---
+document.getElementById('result-class-filter').addEventListener('change', renderResultsTable);
+document.getElementById('result-term-filter').addEventListener('change', renderResultsTable);
+
+// --- MOBILE MENU TOGGLE ---
+menuToggle.addEventListener('click', () => {
+    sidebar.classList.toggle('active');
+});
+
+</script>
+
+</body>
+</html>
