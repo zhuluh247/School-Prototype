@@ -327,7 +327,7 @@
                 </div>
                 <div class="form-group">
                     <label for="login-password">Password</label>
-                    <input type="password" id="login-password" class="form-control" required>
+                    <input type="password" id="login-password" class="form-control" autocomplete="current-password" required>
                 </div>
                 <button type="submit" class="btn btn-primary">Login</button>
             </form>
@@ -703,14 +703,14 @@
                 </div>
                 <div class="form-group">
                     <label for="user-password">Temporary Password</label>
-                    <input type="password" id="user-password" class="form-control" required>
+                    <input type="password" id="user-password" class="form-control" autocomplete="new-password" required>
                 </div>
                 <div class="form-group">
                     <label for="user-fullname">Full Name</label>
                     <input type="text" id="user-fullname" class="form-control" required>
                 </div>
                 <div class="form-group">
-                    <label for="user-role">Role</label>
+                    <label for="user-role-select">Role</label>
                     <select id="user-role-select" class="form-control" required>
                         <option value="Teacher">Teacher</option>
                         <option value="Parent">Parent</option>
@@ -742,6 +742,14 @@
 const firebaseConfig = {
     apiKey: "AIzaSyClD1P291fsCdw6-sX7iJaa7h32pD1c0h0",
     authDomain: "myschool-projectz.firebaseapp.com",
+    // IMPORTANT: Go to your Firebase Console -> Realtime Database -> Rules tab
+    // and paste the following rules to allow access:
+    // {
+    //   "rules": {
+    //     ".read": "auth != null",
+    //     ".write": "auth != null"
+    //   }
+    // }
     databaseURL: "https://myschool-projectz-default-rtdb.firebaseio.com",
     projectId: "myschool-projectz",
     storageBucket: "myschool-projectz.appspot.com",
